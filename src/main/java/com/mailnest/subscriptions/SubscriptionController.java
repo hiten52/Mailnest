@@ -9,8 +9,15 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class SubscriptionController {
 
+  private final SubscriptionService service;
+
+  public SubscriptionController(SubscriptionService service) {
+    this.service = service;
+  }
+
   @PostMapping("/subscriptions")
   public ResponseEntity<Void> subscribe(@Valid @ModelAttribute SubscriptionRequest request) {
+    service.subscribe(request);
     return ResponseEntity.ok().build();
   }
 }

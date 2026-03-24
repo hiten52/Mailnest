@@ -45,7 +45,7 @@ Typical loop:
 * [x] Health check endpoint
 * [x] Integration testing setup
 * [x] Subscription endpoint (validation)
-* [ ] PostgreSQL integration
+* [x] PostgreSQL integration
 * [ ] Email sending (MailHog)
 * [ ] Confirmation tokens (double opt-in)
 * [ ] Production configuration

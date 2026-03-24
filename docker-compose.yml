@@ -1,0 +1,10 @@
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: mailnest
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      TZ: Asia/Kolkata
+    ports:
+      - "5432:5432"

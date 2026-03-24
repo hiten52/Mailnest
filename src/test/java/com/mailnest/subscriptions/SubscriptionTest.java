@@ -7,7 +7,9 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 
@@ -15,6 +17,13 @@ import org.springframework.boot.test.web.server.LocalServerPort;
 class SubscriptionTest {
 
   @LocalServerPort private int port;
+
+  @Autowired private SubscriberRepository subscriberRepository;
+
+  @BeforeEach
+  void cleanDatabase() {
+    subscriberRepository.deleteAll();
+  }
 
   private final HttpClient client = HttpClient.newHttpClient();
 
@@ -32,6 +41,13 @@ class SubscriptionTest {
     HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
     assertThat(response.statusCode()).isEqualTo(200);
+
+    var savedSubscribers = subscriberRepository.findAll();
+    assertThat(savedSubscribers).hasSize(1);
+
+    Subscriber savedSubscriber = savedSubscribers.get(0);
+    assertThat(savedSubscriber.getEmail()).isEqualTo("ursula_le_guin@gmail.com");
+    assertThat(savedSubscriber.getName()).isEqualTo("le guin");
   }
 
   @Test
