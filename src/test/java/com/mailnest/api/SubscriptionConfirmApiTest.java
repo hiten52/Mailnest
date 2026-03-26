@@ -80,4 +80,22 @@ class SubscriptionConfirmApiTest {
 
     assertThat(response.statusCode()).isEqualTo(200);
   }
+
+  @Test
+  void clickingOnTheConfirmationLinkConfirmsSubscriber() throws Exception {
+    emailServer.stubFor(post(urlEqualTo("/email")).willReturn(aResponse().withStatus(200)));
+
+    String body = "name=le%20guin&email=ursula_le_guin%40gmail.com";
+
+    api.postSubscriptions(body);
+
+    var emailRequest = emailServer.getAllServeEvents().get(0);
+    var links = api.getConfirmationLinks(emailRequest);
+
+    api.getSubscriptionConfirmation(links.html());
+
+    var saved = api.getSavedSubscribers().get(0);
+
+    assertThat(saved.getStatus()).isEqualTo("confirmed");
+  }
 }

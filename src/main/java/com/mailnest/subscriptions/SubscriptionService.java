@@ -13,6 +13,7 @@ import java.util.UUID;
 import org.apache.logging.log4j.internal.annotation.SuppressFBWarnings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -23,6 +24,7 @@ public class SubscriptionService {
   private final SubscriptionTokenRepository tokenRepository;
   private final Tracer tracer;
   private final EmailClient emailClient;
+  private final String baseUrl;
 
   @SuppressFBWarnings(
       value = "EI_EXPOSE_REP2",
@@ -32,11 +34,13 @@ public class SubscriptionService {
       SubscriberRepository repository,
       SubscriptionTokenRepository tokenRepository,
       Tracer tracer,
-      EmailClient emailClient) {
+      EmailClient emailClient,
+      @Value("${app.base-url}") String baseUrl) {
     this.repository = repository;
     this.tokenRepository = tokenRepository;
     this.tracer = tracer;
     this.emailClient = emailClient;
+    this.baseUrl = baseUrl;
   }
 
   public void subscribe(NewSubscriber newSubscriber) {
@@ -50,7 +54,7 @@ public class SubscriptionService {
 
       Subscriber subscriber = insertSubscriber(newSubscriber);
 
-      String token = UUID.randomUUID().toString();
+      String token = generateSubscriptionToken();
       saveSubscriptionToken(subscriber.getId(), token);
 
       sendConfirmationEmail(newSubscriber, token);
@@ -108,7 +112,7 @@ public class SubscriptionService {
     emailSpan.tag("subscriber.email_hash", hashEmail(newSubscriber.getEmail().asString()));
 
     try (Tracer.SpanInScope ws = tracer.withSpan(emailSpan.start())) {
-      String confirmationLink = "http://localhost:8080/subscriptions/confirm?token=" + token;
+      String confirmationLink = baseUrl + "/subscriptions/confirm?token=" + token;
 
       String plainBody =
           "Welcome to our newsletter!\nVisit "
@@ -139,5 +143,9 @@ public class SubscriptionService {
     } catch (NoSuchAlgorithmException e) {
       throw new IllegalStateException("SHA-256 not available", e);
     }
+  }
+
+  private String generateSubscriptionToken() {
+    return UUID.randomUUID().toString().replace("-", "");
   }
 }

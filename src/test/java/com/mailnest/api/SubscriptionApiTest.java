@@ -47,6 +47,7 @@ class SubscriptionApiTest {
   @DynamicPropertySource
   static void overrideProperties(DynamicPropertyRegistry registry) {
     registry.add("app.email.base-url", emailServer::baseUrl);
+    registry.add("app.base-url", () -> "http://localhost");
   }
 
   @BeforeEach
