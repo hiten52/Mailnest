@@ -89,6 +89,15 @@ class SubscriptionApiTest {
     var response = api.postSubscriptions(body);
 
     assertThat(response.statusCode()).isEqualTo(200);
+  }
+
+  @Test
+  void subscribePersistsTheNewSubscriber() throws Exception {
+    mockSuccessfulEmailDelivery();
+
+    String body = "name=le%20guin&email=ursula_le_guin%40gmail.com";
+
+    api.postSubscriptions(body);
 
     var savedSubscribers = api.getSavedSubscribers();
     assertThat(savedSubscribers).hasSize(1);
@@ -96,6 +105,7 @@ class SubscriptionApiTest {
     Subscriber savedSubscriber = savedSubscribers.get(0);
     assertThat(savedSubscriber.getEmail()).isEqualTo("ursula_le_guin@gmail.com");
     assertThat(savedSubscriber.getName()).isEqualTo("le guin");
+    assertThat(savedSubscriber.getStatus()).isEqualTo("pending_confirmation");
   }
 
   @Test
