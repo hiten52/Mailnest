@@ -3,8 +3,6 @@ package com.mailnest.api;
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.mailnest.subscriptions.Subscriber;
 import com.mailnest.subscriptions.SubscriberRepository;
@@ -172,23 +170,11 @@ class SubscriptionApiTest {
     String body = "name=le%20guin&email=ursula_le_guin%40gmail.com";
 
     var response = api.postSubscriptions(body);
-
     assertThat(response.statusCode()).isEqualTo(200);
 
-    var requests = emailServer.getAllServeEvents();
-    assertThat(requests).hasSize(1);
+    var requests = emailServer.getAllServeEvents().get(0);
+    var confirmationLinks = api.getConfirmationLinks(requests);
 
-    String requestBody = requests.get(0).getRequest().getBodyAsString();
-
-    ObjectMapper objectMapper = new ObjectMapper();
-    JsonNode json = objectMapper.readTree(requestBody);
-
-    String htmlBody = json.get("HtmlBody").asText();
-    String textBody = json.get("TextBody").asText();
-
-    String htmlLink = extractLink(htmlBody);
-    String textLink = extractLink(textBody);
-
-    assertThat(htmlLink).isEqualTo(textLink);
+    assertThat(confirmationLinks.html()).isEqualTo(confirmationLinks.plainText());
   }
 }
