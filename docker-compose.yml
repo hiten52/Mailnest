@@ -15,3 +15,21 @@ services:
       - "4318:4318"
     environment:
       COLLECTOR_OTLP_ENABLED: "true"
+  mailhog:
+    image: mailhog/mailhog
+    ports:
+      - "1025:1025"  
+      - "8025:8025"
+  fake-postmark:
+    build:
+      context: ./fake_postmark
+    ports:
+      - "8081:8081"
+    environment:
+      FAKE_POSTMARK_HOST: 0.0.0.0
+      FAKE_POSTMARK_PORT: 8081
+      MAILHOG_SMTP_HOST: mailhog
+      MAILHOG_SMTP_PORT: 1025
+      POSTMARK_SERVER_TOKEN: my-secret-token
+    depends_on:
+      - mailhog

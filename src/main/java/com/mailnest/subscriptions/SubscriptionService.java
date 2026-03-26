@@ -1,6 +1,7 @@
 package com.mailnest.subscriptions;
 
 import com.mailnest.domain.NewSubscriber;
+import com.mailnest.email.EmailClient;
 import io.micrometer.tracing.Span;
 import io.micrometer.tracing.Tracer;
 import java.nio.charset.StandardCharsets;
@@ -19,10 +20,13 @@ public class SubscriptionService {
   private static final Logger log = LoggerFactory.getLogger(SubscriptionService.class);
   private final SubscriberRepository repository;
   private final Tracer tracer;
+  private final EmailClient emailClient;
 
-  public SubscriptionService(SubscriberRepository repository, Tracer tracer) {
+  public SubscriptionService(
+      SubscriberRepository repository, Tracer tracer, EmailClient emailClient) {
     this.repository = repository;
     this.tracer = tracer;
+    this.emailClient = emailClient;
   }
 
   public void subscribe(NewSubscriber newSubscriber) {
@@ -35,6 +39,21 @@ public class SubscriptionService {
       log.info("Adding a new subscriber");
 
       insertSubscriber(newSubscriber);
+
+      String confirmationLink =
+          "http://localhost:8080/subscriptions/confirm?token=" + UUID.randomUUID();
+
+      log.info("About to send confirmation email");
+
+      emailClient.sendEmail(
+          newSubscriber.getEmail(),
+          "Confirm your subscription",
+          "<html><body><a href=\""
+              + confirmationLink
+              + "\">Confirm your subscription</a></body></html>",
+          "Visit " + confirmationLink);
+
+      log.info("Confirmation email send call completed");
 
     } catch (Exception e) {
       span.error(e);

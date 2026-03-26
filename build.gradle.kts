@@ -38,6 +38,9 @@ dependencies {
 
 	implementation("commons-validator:commons-validator:1.9.0")
 	testImplementation("net.jqwik:jqwik:1.8.4")
+
+	implementation("org.springframework.boot:spring-boot-starter-webflux")
+	testImplementation("org.wiremock:wiremock-standalone:3.9.1")
 }
 
 tasks.withType<Test> {

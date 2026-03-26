@@ -46,7 +46,7 @@ Typical loop:
 * [x] Integration testing setup
 * [x] Subscription endpoint (validation)
 * [x] PostgreSQL integration
-* [ ] Email sending (MailHog)
+* [x] Email sending (MailHog)
 * [ ] Confirmation tokens (double opt-in)
 * [ ] Production configuration
 * [ ] CI/CD pipeline
