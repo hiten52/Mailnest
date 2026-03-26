@@ -35,6 +35,9 @@ dependencies {
 
 	implementation("org.springframework.boot:spring-boot-starter-actuator")
 	implementation("org.springframework.boot:spring-boot-starter-opentelemetry")
+
+	implementation("commons-validator:commons-validator:1.9.0")
+	testImplementation("net.jqwik:jqwik:1.8.4")
 }
 
 tasks.withType<Test> {

@@ -1,5 +1,6 @@
 package com.mailnest.subscriptions;
 
+import com.mailnest.domain.NewSubscriber;
 import io.micrometer.tracing.Span;
 import io.micrometer.tracing.Tracer;
 import java.nio.charset.StandardCharsets;
@@ -24,15 +25,17 @@ public class SubscriptionService {
     this.tracer = tracer;
   }
 
-  public void subscribe(SubscriptionRequest request) {
+  public void subscribe(NewSubscriber newSubscriber) {
     Span span = tracer.nextSpan().name("add-new-subscriber");
 
     span.tag("operation", "add-new-subscriber");
-    span.tag("subscriber.email_hash", hashEmail(request.getEmail()));
+    span.tag("subscriber.email_hash", hashEmail(newSubscriber.getEmail().asString()));
 
     try (Tracer.SpanInScope ws = tracer.withSpan(span.start())) {
       log.info("Adding a new subscriber");
-      insertSubscriber(request);
+
+      insertSubscriber(newSubscriber);
+
     } catch (Exception e) {
       span.error(e);
       log.error("Failed to add subscriber", e);
@@ -42,19 +45,19 @@ public class SubscriptionService {
     }
   }
 
-  private void insertSubscriber(SubscriptionRequest request) {
+  private void insertSubscriber(NewSubscriber newSubscriber) {
     Span dbSpan = tracer.nextSpan().name("save-subscriber-to-database");
 
     dbSpan.tag("operation", "save-subscriber-to-database");
-    dbSpan.tag("subscriber.email_hash", hashEmail(request.getEmail()));
+    dbSpan.tag("subscriber.email_hash", hashEmail(newSubscriber.getEmail().asString()));
 
     try (Tracer.SpanInScope ws = tracer.withSpan(dbSpan.start())) {
       log.info("Saving new subscriber details in the database");
 
       Subscriber subscriber = new Subscriber();
       subscriber.setId(UUID.randomUUID());
-      subscriber.setEmail(request.getEmail());
-      subscriber.setName(request.getName());
+      subscriber.setEmail(newSubscriber.getEmail().asString());
+      subscriber.setName(newSubscriber.getName().asString());
       subscriber.setSubscribedAt(OffsetDateTime.now());
 
       repository.save(subscriber);

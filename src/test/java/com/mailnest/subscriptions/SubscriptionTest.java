@@ -78,4 +78,35 @@ class SubscriptionTest {
           .isEqualTo(400);
     }
   }
+
+  @Test
+  void subscribeReturns400WhenFieldsArePresentButInvalid()
+      throws IOException, InterruptedException {
+    String[][] testCases = {
+      {"name=&email=ursula_le_guin%40gmail.com", "empty name"},
+      {"name=   &email=ursula_le_guin%40gmail.com", "blank name"},
+      {"name=le%20guin&email=", "empty email"},
+      {"name=le%20guin&email=not-an-email", "invalid email"},
+      {"name=%3Cbad%3E&email=ursula_le_guin%40gmail.com", "name with forbidden characters"}
+    };
+
+    for (String[] testCase : testCases) {
+      String invalidBody = testCase[0];
+      String description = testCase[1];
+
+      HttpRequest request =
+          HttpRequest.newBuilder()
+              .uri(URI.create("http://localhost:" + port + "/subscriptions"))
+              .header("Content-Type", "application/x-www-form-urlencoded")
+              .POST(HttpRequest.BodyPublishers.ofString(invalidBody))
+              .build();
+
+      HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+      assertThat(response.statusCode())
+          .withFailMessage(
+              "The API did not return 400 Bad Request when the payload was %s.", description)
+          .isEqualTo(400);
+    }
+  }
 }
