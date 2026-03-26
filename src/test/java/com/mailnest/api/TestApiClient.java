@@ -52,6 +52,25 @@ public class TestApiClient {
     return client.send(request, HttpResponse.BodyHandlers.ofString());
   }
 
+  public HttpResponse<String> getSubscriptionConfirmation()
+      throws IOException, InterruptedException {
+    HttpRequest request =
+        HttpRequest.newBuilder().uri(URI.create(baseUrl + "/subscriptions/confirm")).GET().build();
+
+    return client.send(request, HttpResponse.BodyHandlers.ofString());
+  }
+
+  public HttpResponse<String> getSubscriptionConfirmation(String token)
+      throws IOException, InterruptedException {
+    HttpRequest request =
+        HttpRequest.newBuilder()
+            .uri(URI.create(baseUrl + "/subscriptions/confirm?token=" + token))
+            .GET()
+            .build();
+
+    return client.send(request, HttpResponse.BodyHandlers.ofString());
+  }
+
   public void clearSubscribers() {
     tokenRepository.deleteAll();
     subscriberRepository.deleteAll();
