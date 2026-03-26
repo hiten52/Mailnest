@@ -4,18 +4,20 @@ import com.mailnest.domain.SubscriberEmail;
 import com.mailnest.email.EmailClient;
 import com.mailnest.email.RestEmailClient;
 import java.time.Duration;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
+@EnableConfigurationProperties(EmailProperties.class)
 public class EmailConfig {
 
   @Bean
-  public EmailClient emailClient() {
+  public EmailClient emailClient(EmailProperties properties) {
     return new RestEmailClient(
-        "http://localhost:8081",
-        SubscriberEmail.parse("test@gmail.com").orElseThrow(),
-        "my-secret-token",
-        Duration.ofSeconds(10));
+        properties.getBaseUrl(),
+        SubscriberEmail.parse(properties.getSender()).orElseThrow(),
+        properties.getAuthorizationToken(),
+        Duration.ofMillis(properties.getTimeoutMillis()));
   }
 }

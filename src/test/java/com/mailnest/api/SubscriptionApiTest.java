@@ -1,16 +1,27 @@
 package com.mailnest.api;
 
+import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.tomakehurst.wiremock.WireMockServer;
 import com.mailnest.subscriptions.Subscriber;
 import com.mailnest.subscriptions.SubscriberRepository;
 import com.mailnest.subscriptions.SubscriptionTokenRepository;
+import java.net.URI;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
@@ -23,14 +34,56 @@ class SubscriptionApiTest {
 
   private TestApiClient api;
 
+  private static final WireMockServer emailServer = new WireMockServer(0);
+
+  @BeforeAll
+  static void startWireMock() {
+    emailServer.start();
+  }
+
+  @AfterAll
+  static void stopWireMock() {
+    emailServer.stop();
+  }
+
+  @DynamicPropertySource
+  static void overrideProperties(DynamicPropertyRegistry registry) {
+    registry.add("app.email.base-url", emailServer::baseUrl);
+  }
+
   @BeforeEach
   void setUp() {
     api = new TestApiClient(port, subscriberRepository, tokenRepository);
     api.clearSubscribers();
+    emailServer.resetAll();
+  }
+
+  private void mockSuccessfulEmailDelivery() {
+    emailServer.stubFor(post(urlEqualTo("/email")).willReturn(aResponse().withStatus(200)));
+  }
+
+  private String extractLink(String text) {
+    Pattern pattern = Pattern.compile("https?://[^\\s\"'<>]+");
+    Matcher matcher = pattern.matcher(text);
+
+    if (!matcher.find()) {
+      throw new AssertionError("Expected exactly one link, found none.");
+    }
+
+    String link = matcher.group();
+
+    if (matcher.find()) {
+      throw new AssertionError("Expected exactly one link, found more than one.");
+    }
+
+    URI.create(link);
+    return link;
   }
 
   @Test
   void subscribeReturns200ForValidFormData() throws Exception {
+    mockSuccessfulEmailDelivery();
+
     String body = "name=le%20guin&email=ursula_le_guin%40gmail.com";
 
     var response = api.postSubscriptions(body);
@@ -87,5 +140,45 @@ class SubscriptionApiTest {
               "The API did not return 400 Bad Request when the payload was %s.", description)
           .isEqualTo(400);
     }
+  }
+
+  @Test
+  void subscribeSendsConfirmationEmailForValidData() throws Exception {
+    mockSuccessfulEmailDelivery();
+
+    String body = "name=test&email=test@gmail.com";
+
+    var response = api.postSubscriptions(body);
+
+    assertThat(response.statusCode()).isEqualTo(200);
+
+    emailServer.verify(1, postRequestedFor(urlEqualTo("/email")));
+  }
+
+  @Test
+  void subscribeSendsConfirmationEmailWithALink() throws Exception {
+    mockSuccessfulEmailDelivery();
+
+    String body = "name=le%20guin&email=ursula_le_guin%40gmail.com";
+
+    var response = api.postSubscriptions(body);
+
+    assertThat(response.statusCode()).isEqualTo(200);
+
+    var requests = emailServer.getAllServeEvents();
+    assertThat(requests).hasSize(1);
+
+    String requestBody = requests.get(0).getRequest().getBodyAsString();
+
+    ObjectMapper objectMapper = new ObjectMapper();
+    JsonNode json = objectMapper.readTree(requestBody);
+
+    String htmlBody = json.get("HtmlBody").asText();
+    String textBody = json.get("TextBody").asText();
+
+    String htmlLink = extractLink(htmlBody);
+    String textLink = extractLink(textBody);
+
+    assertThat(htmlLink).isEqualTo(textLink);
   }
 }

@@ -61,10 +61,14 @@ public class SubscriptionService {
       emailClient.sendEmail(
           newSubscriber.getEmail(),
           "Confirm your subscription",
-          "<html><body><a href=\""
+          "<html><body>Welcome to our newsletter!<br />"
+              + "Click <a href=\""
               + confirmationLink
-              + "\">Confirm your subscription</a></body></html>",
-          "Visit " + confirmationLink);
+              + "\">here</a> to confirm your subscription."
+              + "</body></html>",
+          "Welcome to our newsletter!\nVisit "
+              + confirmationLink
+              + " to confirm your subscription.");
 
       log.info("Confirmation email send call completed");
 
