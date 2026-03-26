@@ -2,23 +2,35 @@ package com.mailnest.api;
 
 import com.mailnest.subscriptions.Subscriber;
 import com.mailnest.subscriptions.SubscriberRepository;
+import com.mailnest.subscriptions.SubscriptionTokenRepository;
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.List;
+import org.apache.logging.log4j.internal.annotation.SuppressFBWarnings;
 
 public class TestApiClient {
 
   private final String baseUrl;
   private final HttpClient client;
   private final SubscriberRepository subscriberRepository;
+  private final SubscriptionTokenRepository tokenRepository;
 
-  public TestApiClient(int port, SubscriberRepository subscriberRepository) {
+  @SuppressFBWarnings(
+      value = "EI_EXPOSE_REP2",
+      justification =
+          "Spring-managed service dependency is injected via constructor and not exposed.")
+  public TestApiClient(
+      int port,
+      SubscriberRepository subscriberRepository,
+      SubscriptionTokenRepository tokenRepository) {
+
     this.baseUrl = "http://localhost:" + port;
     this.client = HttpClient.newHttpClient();
     this.subscriberRepository = subscriberRepository;
+    this.tokenRepository = tokenRepository;
   }
 
   public HttpResponse<String> getHealthCheck() throws IOException, InterruptedException {
@@ -41,6 +53,7 @@ public class TestApiClient {
   }
 
   public void clearSubscribers() {
+    tokenRepository.deleteAll();
     subscriberRepository.deleteAll();
   }
 

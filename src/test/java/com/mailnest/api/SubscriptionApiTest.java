@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.mailnest.subscriptions.Subscriber;
 import com.mailnest.subscriptions.SubscriberRepository;
+import com.mailnest.subscriptions.SubscriptionTokenRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,12 +19,13 @@ class SubscriptionApiTest {
   @LocalServerPort private int port;
 
   @Autowired private SubscriberRepository subscriberRepository;
+  @Autowired private SubscriptionTokenRepository tokenRepository;
 
   private TestApiClient api;
 
   @BeforeEach
   void setUp() {
-    api = new TestApiClient(port, subscriberRepository);
+    api = new TestApiClient(port, subscriberRepository, tokenRepository);
     api.clearSubscribers();
   }
 

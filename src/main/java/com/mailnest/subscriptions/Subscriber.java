@@ -21,13 +21,17 @@ public class Subscriber {
   @Column(name = "subscribed_at", nullable = false)
   private OffsetDateTime subscribedAt;
 
+  @Column private String status;
+
   public Subscriber() {}
 
-  public Subscriber(UUID id, String email, String name, OffsetDateTime subscribedAt) {
+  public Subscriber(
+      UUID id, String email, String name, OffsetDateTime subscribedAt, String status) {
     this.id = id;
     this.email = email;
     this.name = name;
     this.subscribedAt = subscribedAt;
+    this.status = status;
   }
 
   public UUID getId() {
@@ -60,5 +64,13 @@ public class Subscriber {
 
   public void setSubscribedAt(OffsetDateTime subscribedAt) {
     this.subscribedAt = subscribedAt;
+  }
+
+  public String getStatus() {
+    return status;
+  }
+
+  public void setStatus(String status) {
+    this.status = status;
   }
 }

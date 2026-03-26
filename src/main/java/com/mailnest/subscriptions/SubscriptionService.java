@@ -10,6 +10,7 @@ import java.security.NoSuchAlgorithmException;
 import java.time.OffsetDateTime;
 import java.util.HexFormat;
 import java.util.UUID;
+import org.apache.logging.log4j.internal.annotation.SuppressFBWarnings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -19,12 +20,21 @@ public class SubscriptionService {
 
   private static final Logger log = LoggerFactory.getLogger(SubscriptionService.class);
   private final SubscriberRepository repository;
+  private final SubscriptionTokenRepository tokenRepository;
   private final Tracer tracer;
   private final EmailClient emailClient;
 
+  @SuppressFBWarnings(
+      value = "EI_EXPOSE_REP2",
+      justification =
+          "Spring-managed service dependency is injected via constructor and not exposed.")
   public SubscriptionService(
-      SubscriberRepository repository, Tracer tracer, EmailClient emailClient) {
+      SubscriberRepository repository,
+      SubscriptionTokenRepository tokenRepository,
+      Tracer tracer,
+      EmailClient emailClient) {
     this.repository = repository;
+    this.tokenRepository = tokenRepository;
     this.tracer = tracer;
     this.emailClient = emailClient;
   }
@@ -38,7 +48,10 @@ public class SubscriptionService {
     try (Tracer.SpanInScope ws = tracer.withSpan(span.start())) {
       log.info("Adding a new subscriber");
 
-      insertSubscriber(newSubscriber);
+      Subscriber subscriber = insertSubscriber(newSubscriber);
+
+      String token = UUID.randomUUID().toString();
+      saveSubscriptionToken(subscriber.getId(), token);
 
       String confirmationLink =
           "http://localhost:8080/subscriptions/confirm?token=" + UUID.randomUUID();
@@ -64,7 +77,7 @@ public class SubscriptionService {
     }
   }
 
-  private void insertSubscriber(NewSubscriber newSubscriber) {
+  private Subscriber insertSubscriber(NewSubscriber newSubscriber) {
     Span dbSpan = tracer.nextSpan().name("save-subscriber-to-database");
 
     dbSpan.tag("operation", "save-subscriber-to-database");
@@ -77,11 +90,14 @@ public class SubscriptionService {
       subscriber.setId(UUID.randomUUID());
       subscriber.setEmail(newSubscriber.getEmail().asString());
       subscriber.setName(newSubscriber.getName().asString());
+      subscriber.setStatus("pending_confirmation");
       subscriber.setSubscribedAt(OffsetDateTime.now());
 
       repository.save(subscriber);
 
       log.info("New subscriber details have been saved");
+
+      return subscriber;
     } catch (Exception e) {
       dbSpan.error(e);
       log.error("Failed to execute query", e);
@@ -89,6 +105,12 @@ public class SubscriptionService {
     } finally {
       dbSpan.end();
     }
+  }
+
+  private void saveSubscriptionToken(UUID subscriberId, String token) {
+    SubscriptionToken subscriptionToken = new SubscriptionToken(token, subscriberId);
+
+    tokenRepository.save(subscriptionToken);
   }
 
   private String hashEmail(String email) {
