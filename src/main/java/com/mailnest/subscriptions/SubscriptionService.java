@@ -53,22 +53,7 @@ public class SubscriptionService {
       String token = UUID.randomUUID().toString();
       saveSubscriptionToken(subscriber.getId(), token);
 
-      String confirmationLink =
-          "http://localhost:8080/subscriptions/confirm?token=" + UUID.randomUUID();
-
-      log.info("About to send confirmation email");
-
-      emailClient.sendEmail(
-          newSubscriber.getEmail(),
-          "Confirm your subscription",
-          "<html><body>Welcome to our newsletter!<br />"
-              + "Click <a href=\""
-              + confirmationLink
-              + "\">here</a> to confirm your subscription."
-              + "</body></html>",
-          "Welcome to our newsletter!\nVisit "
-              + confirmationLink
-              + " to confirm your subscription.");
+      sendConfirmationEmail(newSubscriber, token);
 
       log.info("Confirmation email send call completed");
 
@@ -115,6 +100,35 @@ public class SubscriptionService {
     SubscriptionToken subscriptionToken = new SubscriptionToken(token, subscriberId);
 
     tokenRepository.save(subscriptionToken);
+  }
+
+  private void sendConfirmationEmail(NewSubscriber newSubscriber, String token) {
+    Span emailSpan = tracer.nextSpan().name("send-confirmation-email");
+    emailSpan.tag("operation", "send-confirmation-email");
+    emailSpan.tag("subscriber.email_hash", hashEmail(newSubscriber.getEmail().asString()));
+
+    try (Tracer.SpanInScope ws = tracer.withSpan(emailSpan.start())) {
+      String confirmationLink = "http://localhost:8080/subscriptions/confirm?token=" + token;
+
+      String plainBody =
+          "Welcome to our newsletter!\nVisit "
+              + confirmationLink
+              + " to confirm your subscription.";
+
+      String htmlBody =
+          "Welcome to our newsletter!<br/>"
+              + "Click <a href=\""
+              + confirmationLink
+              + "\">here</a> to confirm your subscription.";
+
+      emailClient.sendEmail(newSubscriber.getEmail(), "Welcome!", htmlBody, plainBody);
+    } catch (Exception e) {
+      emailSpan.error(e);
+      log.error("Failed to send confirmation email", e);
+      throw e;
+    } finally {
+      emailSpan.end();
+    }
   }
 
   private String hashEmail(String email) {
