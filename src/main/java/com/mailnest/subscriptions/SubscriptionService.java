@@ -15,6 +15,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class SubscriptionService {
@@ -43,6 +44,7 @@ public class SubscriptionService {
     this.baseUrl = baseUrl;
   }
 
+  @Transactional
   public void subscribe(NewSubscriber newSubscriber) {
     Span span = tracer.nextSpan().name("add-new-subscriber");
 
