@@ -1,6 +1,6 @@
 package com.mailnest.subscriptions;
 
-import java.util.Optional;
+import com.mailnest.error.InvalidTokenException;
 import java.util.UUID;
 import org.apache.logging.log4j.internal.annotation.SuppressFBWarnings;
 import org.springframework.http.ResponseEntity;
@@ -27,20 +27,19 @@ public class SubscriptionConfirmationController {
   @GetMapping("/subscriptions/confirm")
   public ResponseEntity<Void> confirm(@RequestParam("token") String token) {
 
-    Optional<SubscriptionToken> tokenEntity = tokenRepository.findBySubscriptionToken(token);
+    SubscriptionToken tokenEntity =
+        tokenRepository
+            .findBySubscriptionToken(token)
+            .orElseThrow(() -> new InvalidTokenException(token));
 
-    if (tokenEntity.isEmpty()) {
-      return ResponseEntity.status(401).build();
-    }
-
-    UUID subscriberId = tokenEntity.get().getSubscriberId();
+    UUID subscriberId = tokenEntity.getSubscriberId();
 
     Subscriber subscriber = subscriberRepository.findById(subscriberId).orElseThrow();
 
     subscriber.setStatus("confirmed");
     subscriberRepository.save(subscriber);
 
-    tokenRepository.delete(tokenEntity.get());
+    tokenRepository.delete(tokenEntity);
 
     return ResponseEntity.ok().build();
   }

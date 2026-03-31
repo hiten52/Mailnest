@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.mailnest.subscriptions.SubscriberRepository;
 import com.mailnest.subscriptions.SubscriptionTokenRepository;
+import java.net.URI;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -97,5 +98,13 @@ class SubscriptionConfirmApiTest {
     var saved = api.getSavedSubscribers().get(0);
 
     assertThat(saved.getStatus()).isEqualTo("confirmed");
+  }
+
+  @Test
+  void confirmReturns401ForInvalidToken() throws Exception {
+    var response =
+        api.getSubscriptionConfirmation(
+            URI.create("http://localhost:" + port + "/subscriptions/confirm?token=bad"));
+    assertThat(response.statusCode()).isEqualTo(401);
   }
 }

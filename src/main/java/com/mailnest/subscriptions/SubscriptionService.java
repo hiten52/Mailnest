@@ -2,6 +2,7 @@ package com.mailnest.subscriptions;
 
 import com.mailnest.domain.NewSubscriber;
 import com.mailnest.email.EmailClient;
+import com.mailnest.error.StoreTokenException;
 import io.micrometer.tracing.Span;
 import io.micrometer.tracing.Tracer;
 import java.nio.charset.StandardCharsets;
@@ -103,9 +104,12 @@ public class SubscriptionService {
   }
 
   private void saveSubscriptionToken(UUID subscriberId, String token) {
-    SubscriptionToken subscriptionToken = new SubscriptionToken(token, subscriberId);
-
-    tokenRepository.save(subscriptionToken);
+    try {
+      tokenRepository.save(new SubscriptionToken(token, subscriberId));
+    } catch (Exception e) {
+      log.error("Failed to store token", e);
+      throw new StoreTokenException(e);
+    }
   }
 
   private void sendConfirmationEmail(NewSubscriber newSubscriber, String token) {

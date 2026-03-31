@@ -7,9 +7,6 @@ import com.github.tomakehurst.wiremock.WireMockServer;
 import com.mailnest.subscriptions.Subscriber;
 import com.mailnest.subscriptions.SubscriberRepository;
 import com.mailnest.subscriptions.SubscriptionTokenRepository;
-import java.net.URI;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -59,24 +56,6 @@ class SubscriptionApiTest {
 
   private void mockSuccessfulEmailDelivery() {
     emailServer.stubFor(post(urlEqualTo("/email")).willReturn(aResponse().withStatus(200)));
-  }
-
-  private String extractLink(String text) {
-    Pattern pattern = Pattern.compile("https?://[^\\s\"'<>]+");
-    Matcher matcher = pattern.matcher(text);
-
-    if (!matcher.find()) {
-      throw new AssertionError("Expected exactly one link, found none.");
-    }
-
-    String link = matcher.group();
-
-    if (matcher.find()) {
-      throw new AssertionError("Expected exactly one link, found more than one.");
-    }
-
-    URI.create(link);
-    return link;
   }
 
   @Test

@@ -3,7 +3,7 @@ package com.mailnest.subscriptions;
 import com.mailnest.domain.NewSubscriber;
 import com.mailnest.domain.SubscriberEmail;
 import com.mailnest.domain.SubscriberName;
-import com.mailnest.subscriptions.error.InvalidSubscriberException;
+import com.mailnest.error.InvalidSubscriberException;
 
 public class SubscriberMapper {
 

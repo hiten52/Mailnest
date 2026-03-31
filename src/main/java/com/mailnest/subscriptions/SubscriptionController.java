@@ -1,7 +1,6 @@
 package com.mailnest.subscriptions;
 
 import com.mailnest.domain.NewSubscriber;
-import com.mailnest.subscriptions.error.InvalidSubscriberException;
 import jakarta.validation.Valid;
 import org.apache.logging.log4j.internal.annotation.SuppressFBWarnings;
 import org.springframework.http.ResponseEntity;
@@ -24,14 +23,9 @@ public class SubscriptionController {
 
   @PostMapping("/subscriptions")
   public ResponseEntity<Void> subscribe(@Valid @ModelAttribute SubscriptionRequest request) {
-    try {
-      NewSubscriber newSubscriber = SubscriberMapper.from(request);
+    NewSubscriber newSubscriber = SubscriberMapper.from(request);
+    service.subscribe(newSubscriber);
 
-      service.subscribe(newSubscriber);
-
-      return ResponseEntity.ok().build();
-    } catch (InvalidSubscriberException e) {
-      return ResponseEntity.badRequest().build();
-    }
+    return ResponseEntity.ok().build();
   }
 }
