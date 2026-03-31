@@ -102,6 +102,18 @@ public class TestApiClient {
     }
   }
 
+  public HttpResponse<String> postNewsletter(String jsonBody)
+      throws IOException, InterruptedException {
+    HttpRequest request =
+        HttpRequest.newBuilder()
+            .uri(URI.create(baseUrl + "/newsletters"))
+            .header("Content-Type", "application/json")
+            .POST(HttpRequest.BodyPublishers.ofString(jsonBody))
+            .build();
+
+    return client.send(request, HttpResponse.BodyHandlers.ofString());
+  }
+
   private URI getLink(String text) throws Exception {
     Pattern pattern = Pattern.compile("https?://[^\\s\"'<>]+");
     Matcher matcher = pattern.matcher(text);
