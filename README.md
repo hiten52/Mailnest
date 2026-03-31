@@ -47,9 +47,11 @@ Typical loop:
 * [x] Subscription endpoint (validation)
 * [x] PostgreSQL integration
 * [x] Email sending (MailHog)
-* [ ] Confirmation tokens (double opt-in)
-* [ ] Production configuration
-* [ ] CI/CD pipeline
+* [x] Confirmation tokens (double opt-in)
+* [ ] Authentication
+* [ ] Session management
+* [ ] TLS 
+* [ ] Fault tolerance
 
 
 ## Inspiration
