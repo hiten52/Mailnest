@@ -19,10 +19,12 @@ class HealthCheckApiTest {
 
   @Autowired private SubscriberRepository subscriberRepository;
   @Autowired private SubscriptionTokenRepository tokenRepository;
+  @Autowired private com.mailnest.newsletters.UserRepository userRepository;
 
   @Test
   void healthCheckWorks() throws IOException, InterruptedException {
-    TestApiClient api = new TestApiClient(port, subscriberRepository, tokenRepository);
+    TestApiClient api =
+        new TestApiClient(port, subscriberRepository, tokenRepository, userRepository);
 
     var response = api.getHealthCheck();
 

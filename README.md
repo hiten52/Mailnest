@@ -48,7 +48,7 @@ Typical loop:
 * [x] PostgreSQL integration
 * [x] Email sending (MailHog)
 * [x] Confirmation tokens (double opt-in)
-* [ ] Authentication
+* [x] Authentication
 * [ ] Session management
 * [ ] TLS 
 * [ ] Fault tolerance

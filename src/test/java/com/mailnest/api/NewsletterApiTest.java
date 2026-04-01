@@ -5,6 +5,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.WireMockServer;
+import com.mailnest.newsletters.User;
+import com.mailnest.newsletters.UserRepository;
 import com.mailnest.subscriptions.SubscriberRepository;
 import com.mailnest.subscriptions.SubscriptionTokenRepository;
 import java.util.Map;
@@ -15,6 +17,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.security.crypto.bcrypt.BCrypt;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -51,13 +54,23 @@ class NewsletterApiTest {
 
   @Autowired private SubscriptionTokenRepository tokenRepository;
 
+  @Autowired private UserRepository userRepository;
+
   private TestApiClient api;
 
   @BeforeEach
   void setUp() {
-    api = new TestApiClient(port, subscriberRepository, tokenRepository);
+    api = new TestApiClient(port, subscriberRepository, tokenRepository, userRepository);
     api.clearSubscribers();
     emailServer.resetAll();
+
+    userRepository.deleteAll();
+
+    User user = new User();
+    user.setUserId(java.util.UUID.randomUUID());
+    user.setUsername("test-user");
+    user.setPasswordHash(BCrypt.hashpw("test-password", BCrypt.gensalt()));
+    userRepository.save(user);
   }
 
   @Test
@@ -147,5 +160,48 @@ class NewsletterApiTest {
 
       assertThat(response.statusCode()).isEqualTo(400);
     }
+  }
+
+  @Test
+  void requestsMissingAuthorizationAreRejected() throws Exception {
+    String newsletterRequestBody =
+        objectMapper.writeValueAsString(
+            Map.of(
+                "title",
+                "Newsletter title",
+                "content",
+                Map.of(
+                    "text", "Newsletter body as plain text",
+                    "html", "<p>Newsletter body as HTML</p>")));
+
+    var response = api.postNewsletterWithoutAuth(newsletterRequestBody);
+
+    assertThat(response.statusCode()).isEqualTo(401);
+    assertThat(response.headers().firstValue("WWW-Authenticate"))
+        .hasValue("Basic realm=\"publish\"");
+  }
+
+  @Test
+  void invalidCredentialsAreRejected() throws Exception {
+    String credentials = "wrong-user:wrong-password";
+    String encoded =
+        java.util.Base64.getEncoder()
+            .encodeToString(credentials.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+
+    String newsletterRequestBody =
+        objectMapper.writeValueAsString(
+            Map.of(
+                "title",
+                "Newsletter title",
+                "content",
+                Map.of(
+                    "text", "Newsletter body as plain text",
+                    "html", "<p>Newsletter body as HTML</p>")));
+
+    var response = api.postNewsletterWithAuthorization(newsletterRequestBody, "Basic " + encoded);
+
+    assertThat(response.statusCode()).isEqualTo(401);
+    assertThat(response.headers().firstValue("WWW-Authenticate"))
+        .hasValue("Basic realm=\"publish\"");
   }
 }

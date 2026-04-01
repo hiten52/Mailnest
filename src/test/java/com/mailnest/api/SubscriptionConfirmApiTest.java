@@ -48,12 +48,13 @@ class SubscriptionConfirmApiTest {
   @Autowired private SubscriberRepository subscriberRepository;
 
   @Autowired private SubscriptionTokenRepository tokenRepository;
+  @Autowired private com.mailnest.newsletters.UserRepository userRepository;
 
   private TestApiClient api;
 
   @BeforeEach
   void setUp() {
-    api = new TestApiClient(port, subscriberRepository, tokenRepository);
+    api = new TestApiClient(port, subscriberRepository, tokenRepository, userRepository);
     api.clearSubscribers();
     emailServer.resetAll();
   }

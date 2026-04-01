@@ -3,6 +3,7 @@ package com.mailnest.api;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.stubbing.ServeEvent;
+import com.mailnest.newsletters.UserRepository;
 import com.mailnest.subscriptions.Subscriber;
 import com.mailnest.subscriptions.SubscriberRepository;
 import com.mailnest.subscriptions.SubscriptionTokenRepository;
@@ -26,6 +27,11 @@ public class TestApiClient {
   private final SubscriberRepository subscriberRepository;
   private final SubscriptionTokenRepository tokenRepository;
 
+  public final TestUser testUser;
+
+  private static final String TEST_USERNAME = "test-user";
+  private static final String TEST_PASSWORD = "test-password";
+
   @SuppressFBWarnings(
       value = "EI_EXPOSE_REP2",
       justification =
@@ -33,13 +39,17 @@ public class TestApiClient {
   public TestApiClient(
       int port,
       SubscriberRepository subscriberRepository,
-      SubscriptionTokenRepository tokenRepository) {
+      SubscriptionTokenRepository tokenRepository,
+      UserRepository userRepository) {
 
     this.baseUrl = "http://localhost:" + port;
     this.port = port;
     this.client = HttpClient.newHttpClient();
     this.subscriberRepository = subscriberRepository;
     this.tokenRepository = tokenRepository;
+
+    this.testUser = TestUser.create();
+    this.testUser.save(userRepository);
   }
 
   public HttpResponse<String> getHealthCheck() throws IOException, InterruptedException {
@@ -104,9 +114,40 @@ public class TestApiClient {
 
   public HttpResponse<String> postNewsletter(String jsonBody)
       throws IOException, InterruptedException {
+    String credentials = TEST_USERNAME + ":" + TEST_PASSWORD;
+    String encoded =
+        java.util.Base64.getEncoder()
+            .encodeToString(credentials.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+
     HttpRequest request =
         HttpRequest.newBuilder()
             .uri(URI.create(baseUrl + "/newsletters"))
+            .header("Authorization", "Basic " + encoded)
+            .header("Content-Type", "application/json")
+            .POST(HttpRequest.BodyPublishers.ofString(jsonBody))
+            .build();
+
+    return client.send(request, HttpResponse.BodyHandlers.ofString());
+  }
+
+  public HttpResponse<String> postNewsletterWithoutAuth(String jsonBody)
+      throws IOException, InterruptedException {
+    HttpRequest request =
+        HttpRequest.newBuilder()
+            .uri(URI.create(baseUrl + "/newsletters"))
+            .header("Content-Type", "application/json")
+            .POST(HttpRequest.BodyPublishers.ofString(jsonBody))
+            .build();
+
+    return client.send(request, HttpResponse.BodyHandlers.ofString());
+  }
+
+  public HttpResponse<String> postNewsletterWithAuthorization(
+      String jsonBody, String authorizationHeader) throws IOException, InterruptedException {
+    HttpRequest request =
+        HttpRequest.newBuilder()
+            .uri(URI.create(baseUrl + "/newsletters"))
+            .header("Authorization", authorizationHeader)
             .header("Content-Type", "application/json")
             .POST(HttpRequest.BodyPublishers.ofString(jsonBody))
             .build();

@@ -44,4 +44,9 @@ public class GlobalExceptionHandler {
   public ResponseEntity<?> handleValidation(Exception e) {
     return ResponseEntity.badRequest().body(Map.of("error", "Invalid subscription data"));
   }
+
+  @ExceptionHandler(UnauthorizedException.class)
+  public ResponseEntity<?> handleUnauthorized(UnauthorizedException e) {
+    return ResponseEntity.status(401).header("WWW-Authenticate", "Basic realm=\"publish\"").build();
+  }
 }

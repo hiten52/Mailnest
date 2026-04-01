@@ -41,6 +41,8 @@ dependencies {
 
 	implementation("org.springframework.boot:spring-boot-starter-webflux")
 	testImplementation("org.wiremock:wiremock-standalone:3.9.1")
+
+	implementation("org.springframework.security:spring-security-crypto")
 }
 
 tasks.withType<Test> {
