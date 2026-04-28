@@ -1,86 +1,59 @@
 package com.mailnest.login;
 
 import com.mailnest.auth.AuthService;
-import com.mailnest.config.HmacSecret;
 import com.mailnest.error.UnauthorizedException;
 import com.mailnest.newsletters.Credentials;
-import com.mailnest.security.HmacUtil;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import java.io.IOException;
-import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import org.springframework.core.io.ClassPathResource;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Controller;
 import org.springframework.util.StreamUtils;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.ResponseBody;
 
-@RestController
+@Controller
 public class LoginController {
 
   private final AuthService authService;
-  private final HmacSecret hmacSecret;
 
-  public LoginController(AuthService authService, HmacSecret hmacSecret) {
+  public LoginController(AuthService authService) {
     this.authService = authService;
-    this.hmacSecret = hmacSecret;
   }
 
   @GetMapping("/login")
-  public ResponseEntity<String> loginForm(
-      @RequestParam(required = false) String error, @RequestParam(required = false) String tag)
-      throws IOException {
+  @ResponseBody
+  public String loginForm(@ModelAttribute("error") String error) throws IOException {
 
     ClassPathResource resource = new ClassPathResource("templates/login.html");
     String html = StreamUtils.copyToString(resource.getInputStream(), StandardCharsets.UTF_8);
 
     String errorHtml = "";
 
-    if (error != null && tag != null) {
-
-      String query = "error=" + URLEncoder.encode(error, StandardCharsets.UTF_8);
-
-      if (HmacUtil.verify(query, tag, hmacSecret.getSecret())) {
-        errorHtml = "<p><i>" + escapeHtml(error) + "</i></p>";
-      } else {
-        // tampered URL → ignore
-      }
+    if (error != null && !error.isBlank()) {
+      errorHtml = "<p><i>" + escapeHtml(error) + "</i></p>";
     }
 
-    html = html.replace("{{error_message}}", errorHtml);
-
-    return ResponseEntity.ok()
-        .contentType(MediaType.parseMediaType("text/html;charset=UTF-8"))
-        .body(html);
+    return html.replace("{{error_message}}", errorHtml);
   }
 
   @PostMapping("/login")
-  public ResponseEntity<Void> login(@Valid @ModelAttribute FormData form) {
+  public String login(
+      @Valid @ModelAttribute FormData form,
+      org.springframework.web.servlet.mvc.support.RedirectAttributes redirectAttributes) {
 
     try {
       Credentials credentials = new Credentials(form.getUsername(), form.getPassword());
-
       authService.validateCredentials(credentials);
 
-      return ResponseEntity.status(303).header(HttpHeaders.LOCATION, "/").build();
+      return "redirect:/";
 
     } catch (UnauthorizedException e) {
-
-      String error = "Authentication failed";
-
-      String query = "error=" + URLEncoder.encode(error, StandardCharsets.UTF_8);
-
-      String tag = HmacUtil.sign(query, hmacSecret.getSecret());
-
-      return ResponseEntity.status(303)
-          .header(HttpHeaders.LOCATION, "/login?" + query + "&tag=" + tag)
-          .build();
+      redirectAttributes.addFlashAttribute("error", "Authentication failed");
+      return "redirect:/login";
     }
   }
 

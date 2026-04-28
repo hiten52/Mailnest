@@ -8,6 +8,8 @@ import com.mailnest.subscriptions.Subscriber;
 import com.mailnest.subscriptions.SubscriberRepository;
 import com.mailnest.subscriptions.SubscriptionTokenRepository;
 import java.io.IOException;
+import java.net.CookieManager;
+import java.net.CookiePolicy;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -44,12 +46,20 @@ public class TestApiClient {
 
     this.baseUrl = "http://localhost:" + port;
     this.port = port;
-    this.client = HttpClient.newHttpClient();
     this.subscriberRepository = subscriberRepository;
     this.tokenRepository = tokenRepository;
 
     this.testUser = TestUser.create();
     this.testUser.save(userRepository);
+
+    CookieManager cookieManager = new CookieManager();
+    cookieManager.setCookiePolicy(CookiePolicy.ACCEPT_ALL);
+
+    this.client =
+        HttpClient.newBuilder()
+            .cookieHandler(cookieManager)
+            .followRedirects(HttpClient.Redirect.ALWAYS)
+            .build();
   }
 
   public HttpResponse<String> getHealthCheck() throws IOException, InterruptedException {
@@ -153,6 +163,25 @@ public class TestApiClient {
             .build();
 
     return client.send(request, HttpResponse.BodyHandlers.ofString());
+  }
+
+  public HttpResponse<String> postLogin(String body) throws IOException, InterruptedException {
+
+    HttpRequest request =
+        HttpRequest.newBuilder()
+            .uri(URI.create(baseUrl + "/login"))
+            .header("Content-Type", "application/x-www-form-urlencoded")
+            .POST(HttpRequest.BodyPublishers.ofString(body))
+            .build();
+
+    return client.send(request, HttpResponse.BodyHandlers.ofString());
+  }
+
+  public String getLoginHtml() throws IOException, InterruptedException {
+    HttpRequest request =
+        HttpRequest.newBuilder().uri(URI.create(baseUrl + "/login")).GET().build();
+
+    return client.send(request, HttpResponse.BodyHandlers.ofString()).body();
   }
 
   private URI getLink(String text) throws Exception {
