@@ -177,6 +177,13 @@ public class TestApiClient {
     return client.send(request, HttpResponse.BodyHandlers.ofString());
   }
 
+  public String getAdminDashboardHtml() throws IOException, InterruptedException {
+    HttpRequest request =
+        HttpRequest.newBuilder().uri(URI.create(baseUrl + "/admin/dashboard")).GET().build();
+
+    return client.send(request, HttpResponse.BodyHandlers.ofString()).body();
+  }
+
   public String getLoginHtml() throws IOException, InterruptedException {
     HttpRequest request =
         HttpRequest.newBuilder().uri(URI.create(baseUrl + "/login")).GET().build();

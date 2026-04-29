@@ -49,8 +49,7 @@ Typical loop:
 * [x] Email sending (MailHog)
 * [x] Confirmation tokens (double opt-in)
 * [x] Authentication
-* [ ] Session management
-* [ ] TLS 
+* [x] Session management
 * [ ] Fault tolerance
 
 

@@ -45,4 +45,22 @@ class LoginApiTest {
     String secondPage = api.getLoginHtml();
     assertThat(secondPage).doesNotContain("Authentication failed");
   }
+
+  @Test
+  void redirect_to_admin_dashboard_after_login_success() throws Exception {
+    String body = "username=test-user&password=test-password";
+
+    api.postLogin(body);
+
+    String html = api.getAdminDashboardHtml();
+
+    assertThat(html).contains("Welcome test-user");
+  }
+
+  @Test
+  void you_must_be_logged_in_to_access_dashboard() throws Exception {
+    String html = api.getAdminDashboardHtml();
+
+    assertThat(html).contains("<title>Login</title>");
+  }
 }

@@ -3,6 +3,9 @@ package com.mailnest.login;
 import com.mailnest.auth.AuthService;
 import com.mailnest.error.UnauthorizedException;
 import com.mailnest.newsletters.Credentials;
+import com.mailnest.session.SessionService;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import java.io.IOException;
@@ -14,14 +17,17 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 @Controller
 public class LoginController {
 
   private final AuthService authService;
+  private final SessionService sessionService;
 
-  public LoginController(AuthService authService) {
+  public LoginController(AuthService authService, SessionService sessionService) {
     this.authService = authService;
+    this.sessionService = sessionService;
   }
 
   @GetMapping("/login")
@@ -43,13 +49,17 @@ public class LoginController {
   @PostMapping("/login")
   public String login(
       @Valid @ModelAttribute FormData form,
-      org.springframework.web.servlet.mvc.support.RedirectAttributes redirectAttributes) {
+      HttpServletRequest request,
+      RedirectAttributes redirectAttributes) {
 
     try {
       Credentials credentials = new Credentials(form.getUsername(), form.getPassword());
       authService.validateCredentials(credentials);
 
-      return "redirect:/";
+      HttpSession newSession = sessionService.renewSession(request.getSession(false), request);
+      sessionService.login(newSession, form.getUsername());
+
+      return "redirect:/admin/dashboard";
 
     } catch (UnauthorizedException e) {
       redirectAttributes.addFlashAttribute("error", "Authentication failed");

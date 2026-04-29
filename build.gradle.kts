@@ -43,6 +43,9 @@ dependencies {
 	testImplementation("org.wiremock:wiremock-standalone:3.9.1")
 
 	implementation("org.springframework.security:spring-security-crypto")
+
+	implementation("org.springframework.boot:spring-boot-starter-data-redis")
+	implementation("org.springframework.session:spring-session-data-redis")
 }
 
 tasks.withType<Test> {
