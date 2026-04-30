@@ -191,6 +191,39 @@ public class TestApiClient {
     return client.send(request, HttpResponse.BodyHandlers.ofString()).body();
   }
 
+  public HttpResponse<String> getChangePassword() throws IOException, InterruptedException {
+    HttpRequest request =
+        HttpRequest.newBuilder().uri(URI.create(baseUrl + "/admin/password")).GET().build();
+
+    return client.send(request, HttpResponse.BodyHandlers.ofString());
+  }
+
+  public String getChangePasswordHtml() throws IOException, InterruptedException {
+    return getChangePassword().body();
+  }
+
+  public HttpResponse<String> postChangePassword(String body)
+      throws IOException, InterruptedException {
+    HttpRequest request =
+        HttpRequest.newBuilder()
+            .uri(URI.create(baseUrl + "/admin/password"))
+            .header("Content-Type", "application/x-www-form-urlencoded")
+            .POST(HttpRequest.BodyPublishers.ofString(body))
+            .build();
+
+    return client.send(request, HttpResponse.BodyHandlers.ofString());
+  }
+
+  public HttpResponse<String> postLogout() throws IOException, InterruptedException {
+    HttpRequest request =
+        HttpRequest.newBuilder()
+            .uri(URI.create(baseUrl + "/admin/logout"))
+            .POST(HttpRequest.BodyPublishers.noBody())
+            .build();
+
+    return client.send(request, HttpResponse.BodyHandlers.ofString());
+  }
+
   private URI getLink(String text) throws Exception {
     Pattern pattern = Pattern.compile("https?://[^\\s\"'<>]+");
     Matcher matcher = pattern.matcher(text);

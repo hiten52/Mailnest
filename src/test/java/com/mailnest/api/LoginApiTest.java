@@ -48,13 +48,19 @@ class LoginApiTest {
 
   @Test
   void redirect_to_admin_dashboard_after_login_success() throws Exception {
-    String body = "username=test-user&password=test-password";
+    String body =
+        "username="
+            + java.net.URLEncoder.encode(
+                api.testUser.username, java.nio.charset.StandardCharsets.UTF_8)
+            + "&password="
+            + java.net.URLEncoder.encode(
+                api.testUser.password, java.nio.charset.StandardCharsets.UTF_8);
 
     api.postLogin(body);
 
     String html = api.getAdminDashboardHtml();
 
-    assertThat(html).contains("Welcome test-user");
+    assertThat(html).contains("Welcome " + api.testUser.username);
   }
 
   @Test

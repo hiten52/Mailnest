@@ -43,6 +43,17 @@ public class AuthService {
     return userRepository.findByUsername(username);
   }
 
+  public void changePassword(String username, String newPassword) {
+    User user =
+        userRepository
+            .findByUsername(username)
+            .orElseThrow(() -> new UnauthorizedException("Unknown user"));
+
+    String newPasswordHash = BCrypt.hashpw(newPassword, BCrypt.gensalt());
+    user.setPasswordHash(newPasswordHash);
+    userRepository.save(user);
+  }
+
   private void verifyPasswordHash(String passwordCandidate, String expectedPasswordHash) {
     boolean valid = BCrypt.checkpw(passwordCandidate, expectedPasswordHash);
     if (!valid) {
