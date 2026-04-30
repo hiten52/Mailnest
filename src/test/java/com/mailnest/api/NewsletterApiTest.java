@@ -3,13 +3,12 @@ package com.mailnest.api;
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.WireMockServer;
-import com.mailnest.newsletters.User;
 import com.mailnest.newsletters.UserRepository;
 import com.mailnest.subscriptions.SubscriberRepository;
 import com.mailnest.subscriptions.SubscriptionTokenRepository;
-import java.util.Map;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -17,7 +16,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
-import org.springframework.security.crypto.bcrypt.BCrypt;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -27,7 +25,6 @@ import org.springframework.test.context.DynamicPropertySource;
 class NewsletterApiTest {
 
   private static final WireMockServer emailServer = new WireMockServer(0);
-  private static final ObjectMapper objectMapper = new ObjectMapper();
 
   @BeforeAll
   static void startWireMock() {
@@ -63,60 +60,91 @@ class NewsletterApiTest {
     api = new TestApiClient(port, subscriberRepository, tokenRepository, userRepository);
     api.clearSubscribers();
     emailServer.resetAll();
+  }
 
-    userRepository.deleteAll();
+  @Test
+  void you_must_be_logged_in_to_see_the_newsletter_form() throws Exception {
+    String html = api.getNewsletterFormHtml();
 
-    User user = new User();
-    user.setUserId(java.util.UUID.randomUUID());
-    user.setUsername("test-user");
-    user.setPasswordHash(BCrypt.hashpw("test-password", BCrypt.gensalt()));
-    userRepository.save(user);
+    assertThat(html).contains("<title>Login</title>");
+  }
+
+  @Test
+  void you_must_be_logged_in_to_publish_a_newsletter() throws Exception {
+    String body =
+        "title="
+            + encode("Newsletter title")
+            + "&textContent="
+            + encode("Plain text")
+            + "&htmlContent="
+            + encode("<p>HTML</p>");
+
+    var response = api.postNewsletter(body);
+
+    assertThat(response.body()).contains("<title>Login</title>");
   }
 
   @Test
   void newslettersAreNotDeliveredToUnconfirmedSubscribers() throws Exception {
     createUnconfirmedSubscriber();
+    login();
 
     emailServer.resetRequests();
 
-    String newsletterRequestBody =
-        objectMapper.writeValueAsString(
-            Map.of(
-                "title",
-                "Newsletter title",
-                "content",
-                Map.of(
-                    "text", "Newsletter body as plain text",
-                    "html", "<p>Newsletter body as HTML</p>")));
+    String body =
+        "title="
+            + encode("Newsletter title")
+            + "&textContent="
+            + encode("Newsletter body as plain text")
+            + "&htmlContent="
+            + encode("<p>Newsletter body as HTML</p>");
 
-    var response = api.postNewsletter(newsletterRequestBody);
+    var response = api.postNewsletter(body);
 
-    assertThat(response.statusCode()).isEqualTo(200);
+    assertThat(response.body()).contains("Newsletter published successfully!");
     emailServer.verify(0, postRequestedFor(urlEqualTo("/email")));
   }
 
   @Test
   void newslettersAreDeliveredToConfirmedSubscribers() throws Exception {
     createConfirmedSubscriber();
+    login();
 
     emailServer.resetRequests();
-
     emailServer.stubFor(post(urlEqualTo("/email")).willReturn(aResponse().withStatus(200)));
 
-    String newsletterRequestBody =
-        objectMapper.writeValueAsString(
-            Map.of(
-                "title",
-                "Newsletter title",
-                "content",
-                Map.of(
-                    "text", "Newsletter body as plain text",
-                    "html", "<p>Newsletter body as HTML</p>")));
+    String body =
+        "title="
+            + encode("Newsletter title")
+            + "&textContent="
+            + encode("Newsletter body as plain text")
+            + "&htmlContent="
+            + encode("<p>Newsletter body as HTML</p>");
 
-    var response = api.postNewsletter(newsletterRequestBody);
+    var response = api.postNewsletter(body);
 
-    assertThat(response.statusCode()).isEqualTo(200);
+    assertThat(response.body()).contains("Newsletter published successfully!");
     emailServer.verify(1, postRequestedFor(urlEqualTo("/email")));
+  }
+
+  @Test
+  void newsletterReturnsErrorForMissingTitle() throws Exception {
+    login();
+
+    String body =
+        "title=&textContent="
+            + encode("Newsletter body")
+            + "&htmlContent="
+            + encode("<p>Newsletter</p>");
+
+    var response = api.postNewsletter(body);
+
+    assertThat(response.body()).contains("Title is required.");
+  }
+
+  private void login() throws Exception {
+    api.postLogin(
+        "username=" + encode(api.testUser.username) + "&password=" + encode(api.testUser.password));
   }
 
   private TestApiClient.ConfirmationLinks createUnconfirmedSubscriber() throws Exception {
@@ -140,68 +168,7 @@ class NewsletterApiTest {
     assertThat(response.statusCode()).isEqualTo(200);
   }
 
-  @Test
-  void newslettersReturns400ForInvalidData() throws Exception {
-
-    var testCases =
-        new Object[] {
-          Map.of(
-              "content",
-              Map.of(
-                  "text", "Newsletter body",
-                  "html", "<p>Newsletter</p>")),
-          Map.of("title", "Newsletter!")
-        };
-
-    for (Object invalidBody : testCases) {
-      String json = new ObjectMapper().writeValueAsString(invalidBody);
-
-      var response = api.postNewsletter(json);
-
-      assertThat(response.statusCode()).isEqualTo(400);
-    }
-  }
-
-  @Test
-  void requestsMissingAuthorizationAreRejected() throws Exception {
-    String newsletterRequestBody =
-        objectMapper.writeValueAsString(
-            Map.of(
-                "title",
-                "Newsletter title",
-                "content",
-                Map.of(
-                    "text", "Newsletter body as plain text",
-                    "html", "<p>Newsletter body as HTML</p>")));
-
-    var response = api.postNewsletterWithoutAuth(newsletterRequestBody);
-
-    assertThat(response.statusCode()).isEqualTo(401);
-    assertThat(response.headers().firstValue("WWW-Authenticate"))
-        .hasValue("Basic realm=\"publish\"");
-  }
-
-  @Test
-  void invalidCredentialsAreRejected() throws Exception {
-    String credentials = "wrong-user:wrong-password";
-    String encoded =
-        java.util.Base64.getEncoder()
-            .encodeToString(credentials.getBytes(java.nio.charset.StandardCharsets.UTF_8));
-
-    String newsletterRequestBody =
-        objectMapper.writeValueAsString(
-            Map.of(
-                "title",
-                "Newsletter title",
-                "content",
-                Map.of(
-                    "text", "Newsletter body as plain text",
-                    "html", "<p>Newsletter body as HTML</p>")));
-
-    var response = api.postNewsletterWithAuthorization(newsletterRequestBody, "Basic " + encoded);
-
-    assertThat(response.statusCode()).isEqualTo(401);
-    assertThat(response.headers().firstValue("WWW-Authenticate"))
-        .hasValue("Basic realm=\"publish\"");
+  private static String encode(String value) {
+    return URLEncoder.encode(value, StandardCharsets.UTF_8);
   }
 }

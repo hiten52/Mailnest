@@ -122,47 +122,27 @@ public class TestApiClient {
     }
   }
 
-  public HttpResponse<String> postNewsletter(String jsonBody)
+  public HttpResponse<String> postNewsletter(String formBody)
       throws IOException, InterruptedException {
-    String credentials = TEST_USERNAME + ":" + TEST_PASSWORD;
-    String encoded =
-        java.util.Base64.getEncoder()
-            .encodeToString(credentials.getBytes(java.nio.charset.StandardCharsets.UTF_8));
-
     HttpRequest request =
         HttpRequest.newBuilder()
-            .uri(URI.create(baseUrl + "/newsletters"))
-            .header("Authorization", "Basic " + encoded)
-            .header("Content-Type", "application/json")
-            .POST(HttpRequest.BodyPublishers.ofString(jsonBody))
+            .uri(URI.create(baseUrl + "/admin/newsletters"))
+            .header("Content-Type", "application/x-www-form-urlencoded")
+            .POST(HttpRequest.BodyPublishers.ofString(formBody))
             .build();
 
     return client.send(request, HttpResponse.BodyHandlers.ofString());
   }
 
-  public HttpResponse<String> postNewsletterWithoutAuth(String jsonBody)
-      throws IOException, InterruptedException {
+  public HttpResponse<String> getNewsletterForm() throws IOException, InterruptedException {
     HttpRequest request =
-        HttpRequest.newBuilder()
-            .uri(URI.create(baseUrl + "/newsletters"))
-            .header("Content-Type", "application/json")
-            .POST(HttpRequest.BodyPublishers.ofString(jsonBody))
-            .build();
+        HttpRequest.newBuilder().uri(URI.create(baseUrl + "/admin/newsletters")).GET().build();
 
     return client.send(request, HttpResponse.BodyHandlers.ofString());
   }
 
-  public HttpResponse<String> postNewsletterWithAuthorization(
-      String jsonBody, String authorizationHeader) throws IOException, InterruptedException {
-    HttpRequest request =
-        HttpRequest.newBuilder()
-            .uri(URI.create(baseUrl + "/newsletters"))
-            .header("Authorization", authorizationHeader)
-            .header("Content-Type", "application/json")
-            .POST(HttpRequest.BodyPublishers.ofString(jsonBody))
-            .build();
-
-    return client.send(request, HttpResponse.BodyHandlers.ofString());
+  public String getNewsletterFormHtml() throws IOException, InterruptedException {
+    return getNewsletterForm().body();
   }
 
   public HttpResponse<String> postLogin(String body) throws IOException, InterruptedException {
